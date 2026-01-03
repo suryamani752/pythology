@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  overflow-x: hidden;
+}
+html {
+  scroll-behavior: smooth;
+}
