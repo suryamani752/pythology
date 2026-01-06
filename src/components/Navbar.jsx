@@ -11,17 +11,14 @@ const Navbar = () => {
       name: "Home",
       href: "#",
     },
-    {
-      name: "Tests",
-      href: "#tests",
-    },
+
     {
       name: "About Us",
       href: "#about",
     },
     {
-      name: "Reports",
-      href: "#reports",
+      name: "Booking",
+      href: "#booking",
     },
   ];
   return (
@@ -29,19 +26,21 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo section */}
-          <div className="flex items-center gap-2 cursor-pointer">
-            <div className="bg-[#b91c1c] p-2 rounded-lg text-white">
-              <TestTube2 size={24} />
+          <a href="#">
+            <div className="flex items-center gap-2 cursor-pointer">
+              <div className="bg-[#b91c1c] p-2 rounded-lg text-white">
+                <TestTube2 size={24} />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 leading-none">
+                  DIVINE PATHO
+                </h1>
+                <span className="text-xs text-[#b91c1c] font-semibold tracking-wider">
+                  CLINIC
+                </span>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 leading-none">
-                DIVINE PATHO
-              </h1>
-              <span className="text-xs text-[#b91c1c] font-semibold tracking-wider">
-                CLINIC
-              </span>
-            </div>
-          </div>
+          </a>
           {/* Desktop navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
