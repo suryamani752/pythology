@@ -47,7 +47,7 @@ pipeline{
             steps{
                 script{
                     echo "Deploying Application...."
-                    // purana container hatao
+                    // purana container hatao aur agar koi container run nahi hai pahle se to jo error aayega usko skip karo aage badho
                     sh "docker rm -f pytho-container || true"
 
                     // naya container run karo (docker hub wala image use karke)
