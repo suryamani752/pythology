@@ -43,7 +43,7 @@ pipeline{
                 }
             }
         }
-        stage{
+        stage("Deploy Container"){
             steps{
                 script{
                     echo "Deploying Application...."
@@ -59,7 +59,7 @@ pipeline{
     // build ke baad safai karna jaruri hai taaki disk full na ho
     post {
         always {
-            sh "docker logout"
+            sh "docker logout || true"
         }
     }
 }
