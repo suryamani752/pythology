@@ -1,5 +1,5 @@
 pipeline{
-    agent any;
+    agent any
 
     environment{
         // Apna docker Hub username yaha lihna hoga
@@ -14,7 +14,7 @@ pipeline{
                 // kyuki hum pipeline from SCM use karege
                 // jenkins automatically code checkout kar lega
                 // yaha alag se git command likhne ki zaroorat nahi hoti
-                ehco "Code chechout done automatically via SCM"
+                echo "Code chechout done automatically via SCM"
             }
         }
         stage("Build Docker Image"){
