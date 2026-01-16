@@ -34,11 +34,11 @@ pipeline{
                     // yahan hum wo Credential ID use kar rahe hai jo jekins mein save kiye hai
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]){
                         //login command
-                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                        sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
 
                         // push command
-                        sh 'docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}'
-                        sh 'docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest'
+                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
+                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
                     }
                 }
             }
