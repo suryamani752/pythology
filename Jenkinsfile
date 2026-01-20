@@ -1,10 +1,7 @@
 pipeline{
     agent any
 
-    // tools define kar rahe hai taaki jenkins unhe download kar sake
-    tools{
-        jdk 'jdk21'
-    }
+    
 
     environment{
         // Apna docker Hub username yaha lihna hoga
