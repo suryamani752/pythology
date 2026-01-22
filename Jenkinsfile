@@ -22,14 +22,26 @@ pipeline{
             }
         }
         // stage 2: OWASP Dependency Check (security)
-        stage("OWASP Security Scan"){
-            steps{
-                echo "Scanning for Vulnerabilities...."
+        stage("Security Scans (FS & Dependencies)"){
+            parallel {
+                stage("OWASP Security Scan"){
+                    steps{
+                        echo "Scanning for Vulnerabilities...."
 
-                // 'DP-Check' wo name hai jo humne tools mein diya tha
-                // pheli baar chalne mein 10-20 min lagega (Database update hone mein)
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                        // 'DP-Check' wo name hai jo humne tools mein diya tha
+                        // pheli baar chalne mein 10-20 min lagega (Database update hone mein)
+                        dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                    }
+                }
+                stage("Trivy FS Scan"){
+                    steps{
+                        echo "Trivy scanning file system..."
+                        // ye poora folder (.) ko scan karege bugs/secrets ke liye
+                        sh "trivy fs . > trivy-fs-report.txt"
+                    }
+                }
             }
+
         }
         // stage 3: SonarQube Analysis(Quality)
         stage("SonarQube Analysis"){
@@ -52,7 +64,15 @@ pipeline{
                 sh "docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest ."
             }
         }
-        // stage 5. push to docker hub
+        // stage 5: image security scan
+        stage("Trivy Image Scan"){
+            steps{
+                echo "Scanning Docker Image for Vulnerabilities...."
+                //Image ko scan karege. agar CRITICAl issue mile to pipeline fail bhi kar sakta hai (exit-code 1 laga kar)
+                sh "trivy image ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} > trivy-image-report.txt"
+            }
+        }
+        // stage 6. push to docker hub
         stage("Push to Docker Hub"){
             steps{
                 script {
@@ -69,7 +89,7 @@ pipeline{
                 }
             }
         }
-        // stage 6. deploy
+        // stage 7. deploy
         stage("Deploy Container"){
             steps{
                 script{
@@ -88,6 +108,8 @@ pipeline{
         always {
             // OWASP ki report graph ke roop mein dikhana
             dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            // trivy report ko archive karna taaki download kar sakein
+            archiveArtifacts artifacts: 'trivy-fs-report.txt, trivy-image-report.txt', allowEmptyArchive: true
             sh "docker logout || true"
         }
     }
