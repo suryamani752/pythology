@@ -9,7 +9,7 @@ COPY package*.json ./
 # npm install ki jagah npm ci use kare (ye fast aur clean install hota hai)
 RUN npm ci
 
-#ab baaki copy kare
+#poora code copy kare
 COPY . .
 
 #code ko build karein (dist folder banega)
