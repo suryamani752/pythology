@@ -22,13 +22,7 @@ jobs:
             # 'uses' ka matalb hai bana-banaya action (plugins) use karna
             - name: Checkout Code
               uses: actions/checkout@v4
-            # step2: java setup (sonarqube ke liye zaroori hai)
-            - name: Setup Java
-              uses: actions/setup-java@v4
-              with:
-                distribution: "temurin" #java ka version (openJDK)
-                java-version: '21'
-            # step 3: install trivy
+            # step 2: install trivy
             - name: Install Trivy
               run: |
                 sudo apt-get install wget gnupg -y
@@ -36,7 +30,7 @@ jobs:
                 echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
                 sudo apt-get update
                 sudo apt-get install trivy -y
-            # step 4: OWASP dependency check
+            # step 3: OWASP dependency check
             # ye action project ki libraries check karega (jenkins ka OWASP plugins jaisa)
             - name: OWASP Dependency Check
               uses: dependency-check/Dependency-Check_Action@main
@@ -45,12 +39,12 @@ jobs:
                 path: "."
                 format: 'HTML'
                 out: 'reports' # reports folder mein save hoga
-            # step 5: Trivy File System Scan
+            # step 4: Trivy File System Scan
             # Trivy ko humne install kiya tha, ab bas command chalani  hai
             - name: Run Trivy FS Scan
               run: |
                 trivy fs . > trivy-fs-report.txt
-            # step 6: sonarqube analysis
+            # step 5: sonarqube analysis
             # ye sab important part hai
             # hum offical SonarSource action use kar rahe hai
             # ye automatically secrets value utha lega jo humne settings > secrets & variables > Actions
@@ -65,27 +59,27 @@ jobs:
                 args: >
                     -Dsonar.projectKey=pytho-github-actions
                     -Dsonar.sources=.
-            # step 7: login to Docker hub
+            # step 6: login to Docker hub
             - name: Login to Docker Hub
               uses: docker/login-action@v3
               with:
                 username: ${{secrets.DOCKERHUB_USERNAME}}
                 password: ${{secrets.DOCKERHUB_TOKEN}}
-            # step 8: build docker image
+            # step 7: build docker image
             - name: Build Docker Image
               run: |
                 docker build -t ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:${{github.run_number}} .
                 docket build -t ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:latest .
-            # step 9: Trivy image scan
+            # step 8: Trivy image scan
             - name: Trivy Image Scan
               run: |
                 trivy image ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:latest > trivy-image-report.txt
-            # step 10: push image
+            # step 9: push image
             - name: push Docker image
               run: |
                 docker push ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:${{github.run_number}}
                 docker push ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:latest
-            # step 11: Deploy to EC2
+            # step 10: Deploy to EC2
             - name: Deploy to Server
               uses: appleboy/ssh-action@master
               with:
