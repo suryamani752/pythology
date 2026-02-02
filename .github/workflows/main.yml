@@ -1,0 +1,108 @@
+name: CI/CD Pipeline - Pytho Project
+
+# 'on' ka matlab trigger. ye pipeline kab chalegi ?
+on:
+  push:
+    branches: ["main"] # jab bhi "main" branch par push hoga tab chalni chaiye
+  pull_request:
+    branches: ["main"] # jab koi pull request aayegi aur "main" par merge ho tab chlani chaiye
+  workflow_dispatch: # ye line se hum GitHub UI se manually bhi run kar sakte hain
+# permission section zaroori hai taaki actions repo ko read kar sake
+permissions:
+    contents: read
+
+jobs:
+    build-deploy:
+        name: "Build and deploy job"
+        # 'runs-on' batata hai ki ye job kahan chalega
+        # 'ubuntu-latest' Github ka free cloud server hai (humein apna EC2 nahi chaiye build ke liye)
+        runs-on: ubuntu-latest
+        steps:
+            # step 1: GitHub se code checkout karna
+            # 'uses' ka matalb hai bana-banaya action (plugins) use karna
+            - name: Checkout Code
+              uses: actions/checkout@v4
+            # step2: java setup (sonarqube ke liye zaroori hai)
+            - name: Setup Java
+              uses: actions/setup-java@v4
+              with:
+                distribution: "temurin" #java ka version (openJDK)
+                java-version: '21'
+            # step 3: install trivy
+            - name: Install Trivy
+              run: |
+                sudo apt-get install wget gnupg -y
+                wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+                echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+                sudo apt-get update
+                sudo apt-get install trivy -y
+            # step 4: OWASP dependency check
+            # ye action project ki libraries check karega (jenkins ka OWASP plugins jaisa)
+            - name: OWASP Dependency Check
+              uses: dependency-check/Dependency-Check_Action@main
+              with:
+                project: 'pytho-project'
+                path: "."
+                format: 'HTML'
+                out: 'reports' # reports folder mein save hoga
+            # step 5: Trivy File System Scan
+            # Trivy ko humne install kiya tha, ab bas command chalani  hai
+            - name: Run Trivy FS Scan
+              run: |
+                trivy fs . > trivy-fs-report.txt
+            # step 6: sonarqube analysis
+            # ye sab important part hai
+            # hum offical SonarSource action use kar rahe hai
+            # ye automatically secrets value utha lega jo humne settings > secrets & variables > Actions
+            - name: SonarQube Scan
+              uses: sonarsource/sonarqube-scan-action@master
+              env:
+                SONAR_TOKEN: ${{secrets.SONAR_TOKEN}}
+                SONAR_HOST_URL: ${{secrets.SONAR_HOST_URL}}
+              with:
+                #agar aapke pass sonar-projects.properties file nahi hai
+                # to aap yaha arguments de sakte hai
+                args: >
+                    -Dsonar.projectKey=pytho-github-actions
+                    -Dsonar.sources=.
+            # step 7: login to Docker hub
+            - name: Login to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                username: ${{secrets.DOCKERHUB_USERNAME}}
+                password: ${{secrets.DOCKERHUB_TOKEN}}
+            # step 8: build docker image
+            - name: Build Docker Image
+              run: |
+                docker build -t ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:${{github.run_number}} .
+                docket build -t ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:latest .
+            # step 9: Trivy image scan
+            - name: Trivy Image Scan
+              run: |
+                trivy image ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:latest > trivy-image-report.txt
+            # step 10: push image
+            - name: push Docker image
+              run: |
+                docker push ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:${{github.run_number}}
+                docker push ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:latest
+            # step 11: Deploy to EC2
+            - name: Deploy to Server
+              uses: appleboy/ssh-action@master
+              with:
+                host: ${{secrets.EC2_HOST}}
+                username: ${{secrets.EC2_USER}}
+                key: ${{secrets.EC2_SSH_KEY}}
+                script: |
+                    # ye command aapke EC2 server ke andar chalegi
+                    echo "Login to Docker Hub on EC2...."
+                    echo ${{secrets.DOCKERHUB_TOKEN}} | docker login -u ${{secrets.DOCKERHUB_USERNAME}} --password-stdin
+                    
+                    echo "pulling latest image..."
+                    docker pull ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:latest
+
+                    echo "stopping old container....."
+                    docker stop pytho-container || true
+                    docker rm pytho-container || true
+
+                    echo "Running New Container...."
+                    docker run -d -p 80:80 --name pytho-container ${{secrets.DOCKERHUB_USERNAME}}/pytho-project:latest
