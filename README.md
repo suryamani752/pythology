@@ -1,16 +1,189 @@
-# React + Vite
+# 🧪 Pathology Lab – React + Vite Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern and production-ready **Pathology Lab frontend application** built using **React 19 and Vite**, styled with **Tailwind CSS**, and deployed using **Docker, Nginx, Jenkins CI/CD, and GitHub Actions**.
 
-Currently, two official plugins are available:
+This project demonstrates **frontend engineering combined with DevOps best practices**, making it suitable for real-world production use and portfolio showcasing.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🚀 Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Frontend
 
-## Expanding the ESLint configuration
+* React 19
+* Vite
+* Tailwind CSS
+* Framer Motion
+* Lucide React Icons
+* React Hot Toast
+* date-fns
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Tooling & Quality
+
+* ESLint
+* npm ci (clean & fast installs)
+
+### DevOps & Deployment
+
+* Docker (Multi-stage build)
+* Nginx (Production web server)
+* Jenkins CI/CD pipeline
+* Trivy security scanning
+* GitHub Actions
+
+---
+
+## 📂 Project Structure
+
+```
+pathology-lab/
+│
+├── .github/workflows/      # GitHub Actions CI
+├── public/                 # Static assets
+├── src/
+│   ├── assets/             # Images & static files
+│   ├── components/         # Reusable React components
+│   ├── App.jsx
+│   ├── App.css
+│   ├── index.css
+│   └── main.jsx
+│
+├── Dockerfile               # Multi-stage Docker build
+├── Jenkinsfile              # Jenkins CI/CD pipeline
+├── index.html               # Vite entry file
+├── vite.config.js
+├── eslint.config.js
+├── package.json
+├── package-lock.json
+└── README.md
+```
+
+---
+
+## 🐳 Docker Setup
+
+This project uses a **multi-stage Docker build** for optimized production deployment.
+
+### Build Stage
+
+* Base image: `node:18-alpine`
+* Installs dependencies using `npm ci`
+* Builds optimized static files
+
+### Production Stage
+
+* Base image: `nginx:alpine`
+* Serves the build files via Nginx
+* Lightweight and secure image
+
+---
+
+## ▶️ Run Locally
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/suryamani752/pythology.git
+cd pathology-lab
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Start development server
+
+```bash
+npm run dev
+```
+
+Application runs on:
+
+```
+http://localhost:5173
+```
+
+---
+
+## 🏗 Build for Production
+
+```bash
+npm run build
+```
+
+The optimized build output will be generated in the `dist/` directory.
+
+---
+
+## 🐳 Run with Docker
+
+### Build Docker Image
+
+```bash
+docker build -t pathology-lab .
+```
+
+### Run Container
+
+```bash
+docker run -d -p 80:80 pathology-lab
+```
+
+Open in browser:
+
+```
+http://localhost
+```
+
+---
+
+## 🔁 CI/CD Pipeline
+
+### Jenkins Pipeline
+
+* Automated build
+* Docker image creation
+* Trivy vulnerability scanning
+* Production-ready workflow
+
+### GitHub Actions
+
+* Continuous Integration
+* Code quality and build checks on push
+
+---
+
+## 🔐 Security
+
+* Trivy vulnerability scanning
+* Clean dependency installation using `npm ci`
+* Minimal production image with Nginx
+
+---
+
+## 🎯 Key Features
+
+* Modern React architecture
+* Responsive UI with animations
+* Scalable component structure
+* Production-grade Docker setup
+* CI/CD enabled workflow
+* Security scanning integrated
+
+---
+
+## 📌 Use Cases
+
+* Portfolio project (Frontend + DevOps)
+* React + Docker practice
+* CI/CD pipeline demonstration
+* Production-ready static web application
+
+---
+
+## 👨‍💻 Author
+
+**Suryamani Kumar**
+GitHub: [https://github.com/suryamani752](https://github.com/suryamani752)
