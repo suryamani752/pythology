@@ -92,17 +92,17 @@ pipeline {
                     sh "docker run -d -p 80:80 --name pytho-prod ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
                 }
             }
+            post {
+                always {
+                    // OWASP ki report graph ke roop mein dikhana
+                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                    // trivy report ko archive karna taaki download kar sakein
+                    archiveArtifacts artifacts: '*.txt', allowEmptyArchive: true
+                    sh "docker logout || true"
+                    cleanWs()
+                }
+            }
         }
     }
 
-    post {
-        always {
-            // OWASP ki report graph ke roop mein dikhana
-            dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            // trivy report ko archive karna taaki download kar sakein
-            archiveArtifacts artifacts: '*.txt', allowEmptyArchive: true
-            sh "docker logout || true"
-            cleanWs()
-        }
-    }
 }
