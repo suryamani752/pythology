@@ -1,116 +1,108 @@
-pipeline{
-    agent any
+pipeline {
+    agent none
 
-    
-
-    environment{
-        // Apna docker Hub username yaha lihna hoga
+    environment {
         DOCKERHUB_USERNAME = "suryamani7"
-        IMAGE_NAME = "patho"
-        IMAGE_TAG = "${BUILD_NUMBER}" // har build ka alag tag hoga (e.g. 1, 2, 3)
+        IMAGE_NAME = "pytho"
         SCANNER_HOME = tool 'sonar-scanner'
     }
 
-    stages{
-        stage("checkout code"){
-            // stage 1: Github se code lana
-            steps{
-                // kyuki hum pipeline from SCM use karege
-                // jenkins automatically code checkout kar lega
-                // yaha alag se git command likhne ki zaroorat nahi hoti
-                echo "Code chechout done automatically via SCM"
-            }
-        }
-        // stage 2: OWASP Dependency Check (security)
-        stage("Security Scans (FS & Dependencies)"){
-            parallel {
-                stage("OWASP Security Scan"){
-                    steps{
-                        echo "Scanning for Vulnerabilities...."
+    stages {
 
-                        // 'DP-Check' wo name hai jo humne tools mein diya tha
-                        // pheli baar chalne mein 10-20 min lagega (Database update hone mein)
-                        dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
-                    }
-                }
-                stage("Trivy FS Scan"){
-                    steps{
-                        echo "Trivy scanning file system..."
-                        // ye poora folder (.) ko scan karege bugs/secrets ke liye
-                        sh "trivy fs . > trivy-fs-report.txt"
-                    }
-                }
+        stage("staging pipeline") {
+            when {
+                branch 'staging'
             }
+            agent {
+                label 'staging-node'
+            }
+            steps {
+                echo "staging branch detected! running on working stage"
+                chechout scm
+                echo "building staging image...."
+                sh "docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:staging ."
+                sh "trivy image ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:staging > trivy-staging-report.txt"
 
-        }
-        // stage 3: SonarQube Analysis(Quality)
-        stage("SonarQube Analysis"){
-            steps{
-                // 'sonar-server' system config wala naam hai
-                withSonarQubeEnv('sonar-server'){
-                    // code ko scan karke report server par bhejna
-                    sh "${SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectKey=my-webapp -Dsonar.sources=."
-                }
-            }
-        }
-        //stage 4. docker build
-        stage("Build Docker Image"){
-            steps{
-                echo "Building Docker Image...."
-                // Image ka name format : dockerhub_username/image:tag
-                sh "docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} ."
-
-                // ek latest tag bhi banate hai taaki deploy karna aashan ho
-                sh "docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest ."
-            }
-        }
-        // stage 5: image security scan
-        stage("Trivy Image Scan"){
-            steps{
-                echo "Scanning Docker Image for Vulnerabilities...."
-                //Image ko scan karege. agar CRITICAl issue mile to pipeline fail bhi kar sakta hai (exit-code 1 laga kar)
-                sh "trivy image ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} > trivy-image-report.txt"
-            }
-        }
-        // stage 6. push to docker hub
-        stage("Push to Docker Hub"){
-            steps{
                 script {
-                    echo "Pushing to Docker Hub..."
-                    // yahan hum wo Credential ID use kar rahe hai jo jekins mein save kiye hai
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]){
-                        //login command
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'docker-hub-creds',
+                            passwordVariable: 'DOCKER_PASS',
+                            usernameVariable: 'DOCKER_USER'
+                        )
+                    ]) {
                         sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
-
-                        // push command
-                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
-                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:staging"
                     }
+                }
+
+                script {
+                    echo "Deploying to staging Environment..."
+                    sh "docker rm -f pytho-staging || true"
+                    sh "docker run -d -p 5000:80 --name pytho-staging ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:staging"
                 }
             }
         }
-        // stage 7. deploy
-        stage("Deploy Container"){
-            steps{
-                script{
-                    echo "Deploying Application...."
-                    // purana container hatao aur agar koi container run nahi hai pahle se to jo error aayega usko skip karo aage badho
-                    sh "docker rm -f pytho-container || true"
 
-                    // naya container run karo (docker hub wala image use karke)
-                    sh "docker run -d -p 80:80 --name pytho-container ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+        stage("production pipeline") {
+            when {
+                branch 'main'
+            }
+            agent {
+                label 'prod-node'
+            }
+            steps {
+                echo "Main branch detected! running on worker prod...."
+                checkout scm
+
+                echo "Running owasp scan..."
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
+                                odcInstallation: 'DP-Check'
+
+                echo "running sonnarqube analysis"
+                withSonarQubeEnv('sonar-server') {
+                    // code ko scan karke report server par bhejna
+                    sh "${SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectKey=pytho-prod -Dsonar.sources=."
+                }
+
+                echo "building production image"
+                sh "docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest ."
+                sh "docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${BUILD_NUMBER} ."
+
+                echo "Running strict security scan...."
+                sh "trivy image ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest > trivy-image-report.txt"
+
+                script {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'docker-hub-creds',
+                            passwordVariable: 'DOCKER_PASS',
+                            usernameVariable: 'DOCKER_USER'
+                        )
+                    ]) {
+                        sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${BUILD_NUMBER}"
+                    }
+                }
+
+                script {
+                    echo "deploying to production"
+                    sh "docker rm -f pytho-prod || true"
+                    sh "docker run -d -p 80:80 --name pytho-prod ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
                 }
             }
         }
     }
-    // build ke baad safai karna jaruri hai taaki disk full na ho
+
     post {
         always {
             // OWASP ki report graph ke roop mein dikhana
             dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             // trivy report ko archive karna taaki download kar sakein
-            archiveArtifacts artifacts: 'trivy-fs-report.txt, trivy-image-report.txt', allowEmptyArchive: true
+            archiveArtifacts artifacts: '*.txt', allowEmptyArchive: true
             sh "docker logout || true"
+            cleanWs()
         }
     }
 }
