@@ -21,7 +21,7 @@ const Footer = () => {
                 <TestTube2 size={24} />
               </div>
               <div>
-                <h2 className="text-xl font-bold leading-none">DIVINE PATHO</h2>
+                <h2 className="text-xl font-bold leading-none">DIVINE PYTHO</h2>
                 <span className="text-xs text-gray-400 tracking-wider">
                   CLINIC
                 </span>
